@@ -96,6 +96,9 @@ int OnInit()
     accountBalance = AccountInfoDouble(ACCOUNT_BALANCE);
     monthlyTarget = accountBalance * 0.30; // 30% mensual
     
+    //--- Crear interfaz gráfica
+    CreateGUI();
+    
     Print("=== VolumeAI Trading Bot Iniciado ===");
     Print("Balance inicial: $", DoubleToString(accountBalance, 2));
     Print("Objetivo mensual: $", DoubleToString(monthlyTarget, 2));
@@ -115,6 +118,9 @@ void OnDeinit(const int reason)
     if(rsiHandle != INVALID_HANDLE) IndicatorRelease(rsiHandle);
     if(macdHandle != INVALID_HANDLE) IndicatorRelease(macdHandle);
     if(bollingerHandle != INVALID_HANDLE) IndicatorRelease(bollingerHandle);
+    
+    //--- Eliminar interfaz gráfica
+    DeleteGUI();
     
     Print("=== VolumeAI Trading Bot Detenido ===");
     Print("Trades totales: ", totalTrades);
@@ -173,6 +179,9 @@ void OnTick()
     
     //--- Gestionar trades existentes
     ManageOpenTrades();
+    
+    //--- Actualizar interfaz gráfica
+    UpdateGUI();
 }
 
 //+------------------------------------------------------------------+
@@ -640,4 +649,451 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
             }
         }
     }
+}
+
+//+------------------------------------------------------------------+
+//| Crear interfaz gráfica                                           |
+//+------------------------------------------------------------------+
+void CreateGUI()
+{
+    //--- Crear panel principal
+    ObjectCreate(0, "VolumeAI_Panel", OBJ_RECTANGLE_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_XDISTANCE, 10);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_YDISTANCE, 30);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_XSIZE, 400);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_YSIZE, 500);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_BGCOLOR, C'25,25,35');
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_BORDER_COLOR, C'0,150,255');
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_BORDER_TYPE, BORDER_FLAT);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_WIDTH, 2);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_BACK, false);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_SELECTABLE, false);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_SELECTED, false);
+    ObjectSetInteger(0, "VolumeAI_Panel", OBJPROP_HIDDEN, true);
+    
+    //--- Título principal
+    ObjectCreate(0, "VolumeAI_Title", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Title", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Title", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Title", OBJPROP_YDISTANCE, 40);
+    ObjectSetString(0, "VolumeAI_Title", OBJPROP_TEXT, "🤖 VolumeAI Trading Bot");
+    ObjectSetString(0, "VolumeAI_Title", OBJPROP_FONT, "Arial Bold");
+    ObjectSetInteger(0, "VolumeAI_Title", OBJPROP_FONTSIZE, 14);
+    ObjectSetInteger(0, "VolumeAI_Title", OBJPROP_COLOR, C'0,255,255');
+    
+    //--- Estado del bot
+    ObjectCreate(0, "VolumeAI_Status", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Status", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Status", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Status", OBJPROP_YDISTANCE, 65);
+    ObjectSetString(0, "VolumeAI_Status", OBJPROP_TEXT, "Estado: ACTIVO");
+    ObjectSetString(0, "VolumeAI_Status", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Status", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Status", OBJPROP_COLOR, C'0,255,0');
+    
+    //--- Balance actual
+    ObjectCreate(0, "VolumeAI_Balance", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Balance", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Balance", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Balance", OBJPROP_YDISTANCE, 85);
+    ObjectSetString(0, "VolumeAI_Balance", OBJPROP_TEXT, "Balance: $0.00");
+    ObjectSetString(0, "VolumeAI_Balance", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Balance", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Balance", OBJPROP_COLOR, C'255,255,255');
+    
+    //--- Profit total
+    ObjectCreate(0, "VolumeAI_Profit", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_YDISTANCE, 105);
+    ObjectSetString(0, "VolumeAI_Profit", OBJPROP_TEXT, "Profit: $0.00");
+    ObjectSetString(0, "VolumeAI_Profit", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_COLOR, C'0,255,0');
+    
+    //--- Trades abiertos
+    ObjectCreate(0, "VolumeAI_Trades", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_YDISTANCE, 125);
+    ObjectSetString(0, "VolumeAI_Trades", OBJPROP_TEXT, "Trades Abiertos: 0");
+    ObjectSetString(0, "VolumeAI_Trades", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_COLOR, C'255,255,0');
+    
+    //--- Tasa de ganancia
+    ObjectCreate(0, "VolumeAI_WinRate", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_YDISTANCE, 145);
+    ObjectSetString(0, "VolumeAI_WinRate", OBJPROP_TEXT, "Tasa Ganancia: 0%");
+    ObjectSetString(0, "VolumeAI_WinRate", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_COLOR, C'255,165,0');
+    
+    //--- Señal de IA
+    ObjectCreate(0, "VolumeAI_AISignal", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_AISignal", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_AISignal", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_AISignal", OBJPROP_YDISTANCE, 165);
+    ObjectSetString(0, "VolumeAI_AISignal", OBJPROP_TEXT, "Señal IA: NEUTRAL");
+    ObjectSetString(0, "VolumeAI_AISignal", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_AISignal", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_AISignal", OBJPROP_COLOR, C'128,128,128');
+    
+    //--- Confianza de IA
+    ObjectCreate(0, "VolumeAI_AIConfidence", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_YDISTANCE, 185);
+    ObjectSetString(0, "VolumeAI_AIConfidence", OBJPROP_TEXT, "Confianza IA: 0%");
+    ObjectSetString(0, "VolumeAI_AIConfidence", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_COLOR, C'255,100,100');
+    
+    //--- Volumen actual
+    ObjectCreate(0, "VolumeAI_Volume", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Volume", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Volume", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Volume", OBJPROP_YDISTANCE, 205);
+    ObjectSetString(0, "VolumeAI_Volume", OBJPROP_TEXT, "Volumen: 0");
+    ObjectSetString(0, "VolumeAI_Volume", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Volume", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Volume", OBJPROP_COLOR, C'100,255,100');
+    
+    //--- Volumen promedio
+    ObjectCreate(0, "VolumeAI_AvgVolume", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_AvgVolume", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_AvgVolume", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_AvgVolume", OBJPROP_YDISTANCE, 225);
+    ObjectSetString(0, "VolumeAI_AvgVolume", OBJPROP_TEXT, "Vol Promedio: 0");
+    ObjectSetString(0, "VolumeAI_AvgVolume", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_AvgVolume", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_AvgVolume", OBJPROP_COLOR, C'100,255,100');
+    
+    //--- RSI
+    ObjectCreate(0, "VolumeAI_RSI", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_YDISTANCE, 245);
+    ObjectSetString(0, "VolumeAI_RSI", OBJPROP_TEXT, "RSI: 0");
+    ObjectSetString(0, "VolumeAI_RSI", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_COLOR, C'255,200,0');
+    
+    //--- MACD
+    ObjectCreate(0, "VolumeAI_MACD", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_YDISTANCE, 265);
+    ObjectSetString(0, "VolumeAI_MACD", OBJPROP_TEXT, "MACD: 0");
+    ObjectSetString(0, "VolumeAI_MACD", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_COLOR, C'255,200,0');
+    
+    //--- Objetivo mensual
+    ObjectCreate(0, "VolumeAI_Target", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Target", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Target", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Target", OBJPROP_YDISTANCE, 285);
+    ObjectSetString(0, "VolumeAI_Target", OBJPROP_TEXT, "Objetivo Mensual: $0.00");
+    ObjectSetString(0, "VolumeAI_Target", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Target", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Target", OBJPROP_COLOR, C'0,255,255');
+    
+    //--- Progreso hacia objetivo
+    ObjectCreate(0, "VolumeAI_Progress", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Progress", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Progress", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Progress", OBJPROP_YDISTANCE, 305);
+    ObjectSetString(0, "VolumeAI_Progress", OBJPROP_TEXT, "Progreso: 0%");
+    ObjectSetString(0, "VolumeAI_Progress", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Progress", OBJPROP_FONTSIZE, 10);
+    ObjectSetInteger(0, "VolumeAI_Progress", OBJPROP_COLOR, C'0,255,0');
+    
+    //--- Barra de progreso visual
+    ObjectCreate(0, "VolumeAI_ProgressBar", OBJ_RECTANGLE_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_YDISTANCE, 325);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_XSIZE, 360);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_YSIZE, 20);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_BGCOLOR, C'50,50,50');
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_BORDER_COLOR, C'0,255,0');
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_BORDER_TYPE, BORDER_FLAT);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_WIDTH, 1);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_BACK, false);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_SELECTABLE, false);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_SELECTED, false);
+    ObjectSetInteger(0, "VolumeAI_ProgressBar", OBJPROP_HIDDEN, true);
+    
+    //--- Barra de progreso interna
+    ObjectCreate(0, "VolumeAI_ProgressFill", OBJ_RECTANGLE_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_XDISTANCE, 21);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_YDISTANCE, 326);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_XSIZE, 0);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_YSIZE, 18);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_BGCOLOR, C'0,255,0');
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_BORDER_TYPE, BORDER_FLAT);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_WIDTH, 0);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_BACK, false);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_SELECTABLE, false);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_SELECTED, false);
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_HIDDEN, true);
+    
+    //--- Última actualización
+    ObjectCreate(0, "VolumeAI_LastUpdate", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_LastUpdate", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_LastUpdate", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_LastUpdate", OBJPROP_YDISTANCE, 355);
+    ObjectSetString(0, "VolumeAI_LastUpdate", OBJPROP_TEXT, "Última Actualización: --");
+    ObjectSetString(0, "VolumeAI_LastUpdate", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_LastUpdate", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_LastUpdate", OBJPROP_COLOR, C'150,150,150');
+    
+    //--- Información de estrategias
+    ObjectCreate(0, "VolumeAI_Strategies", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Strategies", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Strategies", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Strategies", OBJPROP_YDISTANCE, 375);
+    ObjectSetString(0, "VolumeAI_Strategies", OBJPROP_TEXT, "Estrategias: Scalping, Swing, Breakout");
+    ObjectSetString(0, "VolumeAI_Strategies", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Strategies", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_Strategies", OBJPROP_COLOR, C'200,200,200');
+    
+    //--- Información de configuración
+    ObjectCreate(0, "VolumeAI_Config", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Config", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Config", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Config", OBJPROP_YDISTANCE, 395);
+    ObjectSetString(0, "VolumeAI_Config", OBJPROP_TEXT, "Config: Lote=" + DoubleToString(LotSize, 2) + " | SL=" + IntegerToString(StopLoss) + " | TP=" + IntegerToString(TakeProfit));
+    ObjectSetString(0, "VolumeAI_Config", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Config", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_Config", OBJPROP_COLOR, C'150,150,150');
+    
+    //--- Información de IA
+    ObjectCreate(0, "VolumeAI_AIInfo", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_AIInfo", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_AIInfo", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_AIInfo", OBJPROP_YDISTANCE, 415);
+    ObjectSetString(0, "VolumeAI_AIInfo", OBJPROP_TEXT, "IA: " + (UseAI ? "ACTIVA" : "INACTIVA") + " | Confianza: " + DoubleToString(AI_ConfidenceThreshold * 100, 0) + "%");
+    ObjectSetString(0, "VolumeAI_AIInfo", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_AIInfo", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_AIInfo", OBJPROP_COLOR, C'255,100,100');
+    
+    //--- Información de volumen
+    ObjectCreate(0, "VolumeAI_VolumeInfo", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_VolumeInfo", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_VolumeInfo", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_VolumeInfo", OBJPROP_YDISTANCE, 435);
+    ObjectSetString(0, "VolumeAI_VolumeInfo", OBJPROP_TEXT, "Filtro Volumen: " + (UseVolumeFilter ? "ACTIVO" : "INACTIVO") + " | Umbral: " + DoubleToString(VolumeThreshold, 1));
+    ObjectSetString(0, "VolumeAI_VolumeInfo", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_VolumeInfo", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_VolumeInfo", OBJPROP_COLOR, C'100,255,100');
+    
+    //--- Información de tiempo
+    ObjectCreate(0, "VolumeAI_TimeInfo", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_TimeInfo", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_TimeInfo", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_TimeInfo", OBJPROP_YDISTANCE, 455);
+    ObjectSetString(0, "VolumeAI_TimeInfo", OBJPROP_TEXT, "Horario: " + IntegerToString(StartHour) + ":00 - " + IntegerToString(EndHour) + ":00 | Noticias: " + (TradeOnNews ? "SÍ" : "NO"));
+    ObjectSetString(0, "VolumeAI_TimeInfo", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_TimeInfo", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_TimeInfo", OBJPROP_COLOR, C'150,150,150');
+    
+    //--- Información de rendimiento
+    ObjectCreate(0, "VolumeAI_Performance", OBJ_LABEL, 0, 0, 0);
+    ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_CORNER, CORNER_LEFT_UPPER);
+    ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_XDISTANCE, 20);
+    ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_YDISTANCE, 475);
+    ObjectSetString(0, "VolumeAI_Performance", OBJPROP_TEXT, "Objetivo: 30% Mensual | Factor Profit: 0.00");
+    ObjectSetString(0, "VolumeAI_Performance", OBJPROP_FONT, "Arial");
+    ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_FONTSIZE, 9);
+    ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_COLOR, C'0,255,255');
+}
+
+//+------------------------------------------------------------------+
+//| Actualizar interfaz gráfica                                      |
+//+------------------------------------------------------------------+
+void UpdateGUI()
+{
+    //--- Actualizar balance
+    accountBalance = AccountInfoDouble(ACCOUNT_BALANCE);
+    ObjectSetString(0, "VolumeAI_Balance", OBJPROP_TEXT, "Balance: $" + DoubleToString(accountBalance, 2));
+    
+    //--- Actualizar profit
+    ObjectSetString(0, "VolumeAI_Profit", OBJPROP_TEXT, "Profit: $" + DoubleToString(totalProfit, 2));
+    if(totalProfit > 0)
+        ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_COLOR, C'0,255,0');
+    else if(totalProfit < 0)
+        ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_COLOR, C'255,0,0');
+    else
+        ObjectSetInteger(0, "VolumeAI_Profit", OBJPROP_COLOR, C'255,255,255');
+    
+    //--- Actualizar trades abiertos
+    int openTrades = CountOpenTrades();
+    ObjectSetString(0, "VolumeAI_Trades", OBJPROP_TEXT, "Trades Abiertos: " + IntegerToString(openTrades));
+    if(openTrades >= MaxTrades)
+        ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_COLOR, C'255,0,0');
+    else if(openTrades > 0)
+        ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_COLOR, C'255,255,0');
+    else
+        ObjectSetInteger(0, "VolumeAI_Trades", OBJPROP_COLOR, C'128,128,128');
+    
+    //--- Actualizar tasa de ganancia
+    double winRatePercent = 0.0;
+    if(totalTrades > 0)
+        winRatePercent = (double)winningTrades / totalTrades * 100.0;
+    ObjectSetString(0, "VolumeAI_WinRate", OBJPROP_TEXT, "Tasa Ganancia: " + DoubleToString(winRatePercent, 1) + "%");
+    if(winRatePercent >= 60.0)
+        ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_COLOR, C'0,255,0');
+    else if(winRatePercent >= 40.0)
+        ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_COLOR, C'255,165,0');
+    else
+        ObjectSetInteger(0, "VolumeAI_WinRate", OBJPROP_COLOR, C'255,0,0');
+    
+    //--- Actualizar señal de IA
+    double aiSignal = GetAISignal();
+    string signalText = "NEUTRAL";
+    color signalColor = C'128,128,128';
+    
+    if(aiSignal > 0.3)
+    {
+        signalText = "COMPRA";
+        signalColor = C'0,255,0';
+    }
+    else if(aiSignal < -0.3)
+    {
+        signalText = "VENTA";
+        signalColor = C'255,0,0';
+    }
+    
+    ObjectSetString(0, "VolumeAI_AISignal", OBJPROP_TEXT, "Señal IA: " + signalText);
+    ObjectSetInteger(0, "VolumeAI_AISignal", OBJPROP_COLOR, signalColor);
+    
+    //--- Actualizar confianza de IA
+    double confidence = GetAIConfidence();
+    ObjectSetString(0, "VolumeAI_AIConfidence", OBJPROP_TEXT, "Confianza IA: " + DoubleToString(confidence * 100, 1) + "%");
+    if(confidence >= 0.8)
+        ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_COLOR, C'0,255,0');
+    else if(confidence >= 0.6)
+        ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_COLOR, C'255,165,0');
+    else
+        ObjectSetInteger(0, "VolumeAI_AIConfidence", OBJPROP_COLOR, C'255,0,0');
+    
+    //--- Actualizar volumen
+    double currentVolume = GetCurrentVolume();
+    ObjectSetString(0, "VolumeAI_Volume", OBJPROP_TEXT, "Volumen: " + DoubleToString(currentVolume, 0));
+    
+    //--- Actualizar volumen promedio
+    double avgVolume = GetAverageVolume();
+    ObjectSetString(0, "VolumeAI_AvgVolume", OBJPROP_TEXT, "Vol Promedio: " + DoubleToString(avgVolume, 0));
+    
+    //--- Actualizar RSI
+    double rsi[];
+    if(CopyBuffer(rsiHandle, 0, 0, 1, rsi) > 0)
+    {
+        ObjectSetString(0, "VolumeAI_RSI", OBJPROP_TEXT, "RSI: " + DoubleToString(rsi[0], 1));
+        if(rsi[0] < 30)
+            ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_COLOR, C'0,255,0');
+        else if(rsi[0] > 70)
+            ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_COLOR, C'255,0,0');
+        else
+            ObjectSetInteger(0, "VolumeAI_RSI", OBJPROP_COLOR, C'255,200,0');
+    }
+    
+    //--- Actualizar MACD
+    double macdMain[], macdSignal[];
+    if(CopyBuffer(macdHandle, 0, 0, 1, macdMain) > 0 && CopyBuffer(macdHandle, 1, 0, 1, macdSignal) > 0)
+    {
+        ObjectSetString(0, "VolumeAI_MACD", OBJPROP_TEXT, "MACD: " + DoubleToString(macdMain[0], 5));
+        if(macdMain[0] > macdSignal[0])
+            ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_COLOR, C'0,255,0');
+        else
+            ObjectSetInteger(0, "VolumeAI_MACD", OBJPROP_COLOR, C'255,0,0');
+    }
+    
+    //--- Actualizar objetivo mensual
+    ObjectSetString(0, "VolumeAI_Target", OBJPROP_TEXT, "Objetivo Mensual: $" + DoubleToString(monthlyTarget, 2));
+    
+    //--- Actualizar progreso hacia objetivo
+    double progress = 0.0;
+    if(monthlyTarget > 0)
+        progress = (totalProfit / monthlyTarget) * 100.0;
+    
+    ObjectSetString(0, "VolumeAI_Progress", OBJPROP_TEXT, "Progreso: " + DoubleToString(progress, 1) + "%");
+    
+    //--- Actualizar barra de progreso visual
+    int progressWidth = (int)(360 * progress / 100.0);
+    if(progressWidth > 360) progressWidth = 360;
+    if(progressWidth < 0) progressWidth = 0;
+    ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_XSIZE, progressWidth);
+    
+    if(progress >= 100.0)
+        ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_BGCOLOR, C'0,255,0');
+    else if(progress >= 50.0)
+        ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_BGCOLOR, C'255,165,0');
+    else
+        ObjectSetInteger(0, "VolumeAI_ProgressFill", OBJPROP_BGCOLOR, C'255,0,0');
+    
+    //--- Actualizar última actualización
+    ObjectSetString(0, "VolumeAI_LastUpdate", OBJPROP_TEXT, "Última Actualización: " + TimeToString(TimeCurrent(), TIME_SECONDS));
+    
+    //--- Actualizar factor de profit
+    double profitFactor = 0.0;
+    if(totalTrades > 0)
+    {
+        double totalWins = 0.0;
+        double totalLosses = 0.0;
+        for(int i = 0; i < totalTrades; i++)
+        {
+            if(tradeResults[i].profit > 0)
+                totalWins += tradeResults[i].profit;
+            else
+                totalLosses += MathAbs(tradeResults[i].profit);
+        }
+        if(totalLosses > 0)
+            profitFactor = totalWins / totalLosses;
+    }
+    
+    ObjectSetString(0, "VolumeAI_Performance", OBJPROP_TEXT, "Objetivo: 30% Mensual | Factor Profit: " + DoubleToString(profitFactor, 2));
+    if(profitFactor >= 2.0)
+        ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_COLOR, C'0,255,0');
+    else if(profitFactor >= 1.0)
+        ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_COLOR, C'255,165,0');
+    else
+        ObjectSetInteger(0, "VolumeAI_Performance", OBJPROP_COLOR, C'255,0,0');
+}
+
+//+------------------------------------------------------------------+
+//| Eliminar interfaz gráfica                                        |
+//+------------------------------------------------------------------+
+void DeleteGUI()
+{
+    ObjectDelete(0, "VolumeAI_Panel");
+    ObjectDelete(0, "VolumeAI_Title");
+    ObjectDelete(0, "VolumeAI_Status");
+    ObjectDelete(0, "VolumeAI_Balance");
+    ObjectDelete(0, "VolumeAI_Profit");
+    ObjectDelete(0, "VolumeAI_Trades");
+    ObjectDelete(0, "VolumeAI_WinRate");
+    ObjectDelete(0, "VolumeAI_AISignal");
+    ObjectDelete(0, "VolumeAI_AIConfidence");
+    ObjectDelete(0, "VolumeAI_Volume");
+    ObjectDelete(0, "VolumeAI_AvgVolume");
+    ObjectDelete(0, "VolumeAI_RSI");
+    ObjectDelete(0, "VolumeAI_MACD");
+    ObjectDelete(0, "VolumeAI_Target");
+    ObjectDelete(0, "VolumeAI_Progress");
+    ObjectDelete(0, "VolumeAI_LastUpdate");
+    ObjectDelete(0, "VolumeAI_ProgressBar");
+    ObjectDelete(0, "VolumeAI_ProgressFill");
+    ObjectDelete(0, "VolumeAI_Strategies");
+    ObjectDelete(0, "VolumeAI_Config");
+    ObjectDelete(0, "VolumeAI_AIInfo");
+    ObjectDelete(0, "VolumeAI_VolumeInfo");
+    ObjectDelete(0, "VolumeAI_TimeInfo");
+    ObjectDelete(0, "VolumeAI_Performance");
 }
